@@ -1,5 +1,5 @@
 <?php
-require("config.php");
+require("script.php");
 /*
  * Parse all input parameters
  */
@@ -185,8 +185,7 @@ class cWiki {
 						$this->area51_ok = array_merge($this->area51_ok, $arrOK);
 					} else {
 						$ret .= $tmpRet . "\n";
-					}			
-					break; // TODO: levare
+					}
 				}
 			}
 		}
@@ -394,7 +393,7 @@ class cWiki {
 			CURLOPT_COOKIEJAR => "wikiedit.txt",
 			CURLOPT_COOKIEFILE => "wikiedit.txt"
 		));
-		$ret = $this->isJson($response["content"]); // TODO: è un json?
+		$ret = $this->isJson($response["content"]);
 		// var_dump("loginRequest");
 		// var_dump($response);
 		if ($ret == "OK") {
@@ -434,7 +433,7 @@ class cWiki {
 
 	// Step 4: POST request to edit a page
 	public function editRequest($page, $content) {
-    $page = "User:Molideus"; // TODO: levare
+    	if (DEBUG) $page = "User:Molideus"; // Only for debug
     
 		$params4 = [
 			"action" => "edit",

@@ -1,5 +1,5 @@
 <?php
-  require("config.php");
+  require("script.php");
 ?><!DOCTYPE html>
 <html>
 <head>
@@ -43,7 +43,7 @@
 </head>
 <body>
 
-<h2>Area51 functions merge</h2>
+<h2>Area51 functions merge <?php print (DEBUG ? "[DEBUG MODE]" : ""); ?></h2>
 
   <label for="Area51">Area 51 page link:</label><br>
   <input type="text" id="Area51" name="Area51" class="inputInsert" value="https://wiki.mudlet.org/w/Area_51">

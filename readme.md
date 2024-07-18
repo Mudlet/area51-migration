@@ -5,7 +5,10 @@ Another simple and "ugly" script that reads new functions document on the Area_5
 
 ### Configuration
 
-Open the config.php file and compile the mandatory field:
+Open the config.sample.php file and compile the mandatory field then save it sa config.custom.php
+
+#### General
++ DEBUG: enable it to save the modified wiki page to ttps://wiki.mudlet.org/w/User:Molideus for testing porpuse. This flag also enable a verbose "Content" field that show a list of parsed function
 
 #### Crowdin
 + WIKI_BOT: it's the new of the bot that should modify the wiki page
