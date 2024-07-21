@@ -8,16 +8,18 @@ Another simple and "ugly" script that reads new functions document on the Area_5
 Open the config.sample.php file and compile the mandatory field then save it sa config.custom.php
 
 #### General
-+ DEBUG: enable it to save the modified wiki page to ttps://wiki.mudlet.org/w/User:Molideus for testing porpuse. This flag also enable a verbose "Content" field that show a list of parsed function
-
-#### Crowdin
-+ WIKI_BOT: it's the new of the bot that should modify the wiki page
-+ WIKI_BOT_PASS: password generated on the page https://wiki.mudlet.org/w/Special:BotPasswords. This script needs only EDIT_PAGE permission.
++ DEBUG: enable it to save the modified wiki page to the page specified in DEBUG_PAGE instead of the real wikipage. This flag also enable a verbose "Content" field that show a list of parsed function
++ DEBUG_PAGE: page where save the modified page instead of the real one
 
 #### Github
 + GITHUB_USER: the user who own the repository
 + GITHUB_REPO: the repository name
 + GITHUB_TOKEN: legacy access token with only PUBLIC_REPO permission https://github.com/settings/tokens
+
+#### Wikimedia (optional)
+This option can be blank and insert manually in the main page
++ WIKI_BOT: it's the new of the bot that should modify the wiki page
++ WIKI_BOT_PASS: password generated on the page https://wiki.mudlet.org/w/Special:BotPasswords. This script needs only EDIT_PAGE permission.
 
 ### Usage
 + Simply open the url wiki.php on the web folder you publish this scripts (ex. https://example.org/script/wiki.php)

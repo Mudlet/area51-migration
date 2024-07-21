@@ -46,10 +46,15 @@
 <h2>Area51 functions merge <?php print (DEBUG ? "[DEBUG MODE]" : ""); ?></h2>
 
   <label for="Area51">Area 51 page link:</label><br>
-  <input type="text" id="Area51" name="Area51" class="inputInsert" value="https://wiki.mudlet.org/w/Area_51">
+  <input type="text" id="Area51" name="Area51" class="inputInsert" value="https://wiki.mudlet.org/w/Area_51"><br>
+  <label for="WikiBotUser">Wiki Bot User:</label><br>
+  <input type="text" id="WikiBotUser" name="WikiBotUser" class="inputInsert" value="<?php print WIKI_BOT_USER; ?>"><br>
+  <label for="WikiBotPass">Wiki Bot Pass:</label><br>
+  <input type="text" id="WikiBotPass" name="WikiBotPass" class="inputInsert" value="<?php print WIKI_BOT_PASS; ?>"><br>
   <input id="btn-start" type="button" value="START">
 
 <p>Just click the "Start" button and wait for function loading.</p>
+<p>NOTE: Credential generated at https://wiki.mudlet.org/w/Special:BotPasswords, needed only "Edit pages" permission</p>
 
 <h2>Output</h2>
 
@@ -105,10 +110,14 @@
 				mergeable[i] = $(this).val();
 			});
 			if (mergeable.length == 0) {
-				alert("No functions to merge");
-			} else if (confirm("Do you really want to merge this functions?")) {
-				$('#btn-merge, #btn-delete').prop('disabled', true);
-				Area51Insert(mergeable);
+				alert("No functions to merge");        
+			} else {
+                if ($("#WikiBotUser").val() == "" || $("#WikiBotPass").val() == "") {
+                    alert("Wiki Bot User / Pass are mandatory for merging!");
+                } else if (confirm("Do you really want to merge this functions?")) {
+                    $('#btn-merge, #btn-delete').prop('disabled', true);
+                    Area51Insert(mergeable);
+                }
 			}
 		});
 		
@@ -120,82 +129,92 @@
 			});
 			if (deletable.length == 0) {
 				alert("No functions to delete");
-			} else if (confirm("Do you really want to delete this functions?")) {
-				$('#btn-merge, #btn-delete').prop('disabled', true);
-				Area51Delete(deletable);
-			}
-		});		
+			} else { 
+                if ($("#WikiBotUser").val() == "" || $("#WikiBotPass").val() == "") {
+                    alert("Wiki Bot User / Pass are mandatory for deleting!");
+                } else if (confirm("Do you really want to delete this functions from Area51?")) {
+                    $('#btn-merge, #btn-delete').prop('disabled', true);
+                    Area51Delete(deletable);
+                }
+            }
+        });		
 	});
 
   /*
    * Request Wikimedia to get functions element
    */
 	function Area51Functions() {
-		makeRequest({action: "Area51", area51: $("#Area51").val()}, function (status, data) {
-			switch (status) {
-				case "beforeSend":
-					writeOutput("Area51 functions started...");
-				break;
-				case "success":
-					var trg;
-					var kSections, vSections, kFunctions, vFunctions, arrFunctions;
-					if (data['data']['status'] == "OK") {
-						writeOutput("[INFO] functions found: populate table");
-						// Populate the table with functions to merge
-						trg = $("#tableMerge tbody");
-						trg.empty();
-						for (kSections in data['data']['table']) {
-							vSections = data['data']['table'][kSections];
-							for (kFunctions in vSections) {
-								vFunctions = vSections[kFunctions];
-								if (vFunctions["NAME"] != "STUBLAST") {
-									// Add link to wiki
-									if (vFunctions["LINK"] != "") {
-										vFunctions["LINK"] = '<a href="' + vFunctions["LINK"] + '" target="_blank">' + vFunctions["NAME"] + '</a>';
-									} else {
-										vFunctions["LINK"] = vFunctions["NAME"];
-									}
-									if (vFunctions["WIKI_LINK"] != "") {
-										vFunctions["WIKI_LINK"] = '<a href="' + vFunctions["WIKI_LINK"] + '" target="_blank">' + vFunctions["NOTE"] + '</a>';
-									} else {
-										vFunctions["WIKI_LINK"] = vFunctions["NOTE"];
-									}
-									// Add link to github
-									vFunctions["PR"] = vFunctions["PR"].replace(/#(\d+)/, '<a href="' + GITHUB_URL + '$1" target="_blank">#$1</a>');
+		makeRequest({
+            WikiBotUser: $("#WikiBotUser").val(), WikiBotPass: $("#WikiBotPass").val(),
+            action: "Area51", area51: $("#Area51").val()
+        }, function (status, data) {
+            switch (status) {
+                case "beforeSend":
+                    writeOutput("Area51 functions started...");
+                break;
+                case "success":
+                    var trg;
+                    var kSections, vSections, kFunctions, vFunctions, arrFunctions;
+                    if (data['data']['status'] == "OK") {
+                        writeOutput("[INFO] functions found: populate table");
+                        // Populate the table with functions to merge
+                        trg = $("#tableMerge tbody");
+                        trg.empty();
+                        for (kSections in data['data']['table']) {
+                            vSections = data['data']['table'][kSections];
+                            for (kFunctions in vSections) {
+                                vFunctions = vSections[kFunctions];
+                                if (vFunctions["NAME"] != "STUBLAST") {
+                                    // Add link to wiki
+                                    if (vFunctions["LINK"] != "") {
+                                        vFunctions["LINK"] = '<a href="' + vFunctions["LINK"] + '" target="_blank">' + vFunctions["NAME"] + '</a>';
+                                    } else {
+                                        vFunctions["LINK"] = vFunctions["NAME"];
+                                    }
+                                    if (vFunctions["WIKI_LINK"] != "") {
+                                        vFunctions["WIKI_LINK"] = '<a href="' + vFunctions["WIKI_LINK"] + '" target="_blank">' + vFunctions["NOTE"] + '</a>';
+                                    } else {
+                                        vFunctions["WIKI_LINK"] = vFunctions["NOTE"];
+                                    }
+                                    // Add link to github
+                                    vFunctions["PR"] = vFunctions["PR"].replace(/#(\d+)/, '<a href="' + GITHUB_URL + '$1" target="_blank">#$1</a>');
 
-									// Print the table row
-									trg.append('<tr>' +
-										'<td>' + kSections + '</td>' + "\n" +
-										'<td>' + vFunctions["LINK"] + '</td>' + "\n" +
-										'<td>' + vFunctions["PR"] + '</td>' + "\n" +
-										'<td>' + (vFunctions['MERGE'] >= 1 ? '<input type="checkbox" class="mergeable" name="merge[]" value="' + vFunctions["ID"] + '" />' : '') + '</td>' + "\n" +
-										'<td>' + (vFunctions['MERGE'] >= 1 ? '<input type="checkbox" class="deletable" name="delete[]" value="' + vFunctions["ID"] + '" />' : '') + '</td>' + "\n" +
-										'<td>' + vFunctions["OFFSET_INSERT"] + '</td>' + "\n" +
-										'<td>' + vFunctions["WIKI_LINK"] + '</td>' + "\n" +
-										'<td>' + <?php print (DEBUG ? 'vFunctions["CONTENT"]' : '""'); ?> + '</td>' + "\n" +
-									'</tr>');
-								}
-							}
-						}
+                                    // Print the table row
+                                    trg.append('<tr>' +
+                                        '<td>' + kSections + '</td>' + "\n" +
+                                        '<td>' + vFunctions["LINK"] + '</td>' + "\n" +
+                                        '<td>' + vFunctions["PR"] + '</td>' + "\n" +
+                                        '<td>' + (vFunctions['MERGE'] >= 1 ? '<input type="checkbox" class="mergeable" name="merge[]" value="' + vFunctions["ID"] + '" />' : '') + '</td>' + "\n" +
+                                        '<td>' + (vFunctions['MERGE'] >= 1 ? '<input type="checkbox" class="deletable" name="delete[]" value="' + vFunctions["ID"] + '" />' : '') + '</td>' + "\n" +
+                                        '<td>' + vFunctions["OFFSET_INSERT"] + '</td>' + "\n" +
+                                        '<td>' + vFunctions["WIKI_LINK"] + '</td>' + "\n" +
+                                        '<td>' + <?php print (DEBUG ? 'vFunctions["CONTENT"]' : '""'); ?> + '</td>' + "\n" +
+                                    '</tr>');
+                                }
+                            }
+                        }
 
-						$('#btn-merge, #btn-delete').prop('disabled', false);
-					} else {
-						writeOutput("[ERROR] functions error [2]: " + data['data']['status']);
-					}
-				break;
-				case "error":
-					writeOutput("[ERROR] functions error [1]: " + data);
-					$('#Area51, #btn-start').prop('disabled', false);
-				break;
-			};
-		});
+                        $('#btn-merge, #btn-delete').prop('disabled', false);
+                    } else {
+                        writeOutput("[ERROR] functions error [2]: " + data['data']['status']);
+                    }
+                break;
+                case "error":
+                    writeOutput("[ERROR] functions error [1]: " + data);
+                    $('#Area51, #btn-start').prop('disabled', false);
+                break;
+            };
+        });
 	}
 
 	/*
    * Insert wikimedia for selected functions
    */
   	function Area51Insert(merge) {
-		makeRequest({action: "Area51Insert", area51: $("#Area51").val(), merge51: merge}, function (status, data) {
+		makeRequest({
+            WikiBotUser: $("#WikiBotUser").val(), WikiBotPass: $("#WikiBotPass").val(),
+            action: "Area51Insert", area51: $("#Area51").val(), merge51: merge
+        }, function (status, data) {
 			switch (status) {
 				case "beforeSend":
 					writeOutput("Area51 merge started...");
@@ -220,11 +239,14 @@
 			};
 		});
 	}
-	/*
+  /*
    * Delete wikimedia for selected functions
    */
   	function Area51Delete(del) {
-		makeRequest({action: "Area51Delete", area51: $("#Area51").val(), delete51: del}, function (status, data) {
+		makeRequest({
+            WikiBotUser: $("#WikiBotUser").val(), WikiBotPass: $("#WikiBotPass").val(),
+            action: "Area51Delete", area51: $("#Area51").val(), delete51: del
+        }, function (status, data) {
 			switch (status) {
 				case "beforeSend":
 					writeOutput("Area51 delete started...");

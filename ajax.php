@@ -3,6 +3,8 @@ require("script.php");
 /*
  * Parse all input parameters
  */
+$qs_wikiuser = @$_POST['param']['WikiBotUser'];
+$qs_wikipass = @$_POST['param']['WikiBotPass'];
 $qs_action   = @$_POST['param']['action'];
 $qs_area51   = @$_POST['param']['area51'];
 $qs_merge51  = @$_POST['param']['merge51'];
@@ -15,26 +17,24 @@ $response['data'] = array();
 /*
  * Handle github/wiki action
  */
+$oGithub = new cGithub();
+$oWiki = new cWiki($qs_area51, $oGithub);
+$oWiki->setCredential($qs_wikiuser, $qs_wikipass);
+
 switch ($qs_action) {
   case "Area51":
 	// Retrive the functions from area51 page
-	$oGithub = new cGithub();
-    $oWiki = new cWiki($qs_area51, $oGithub);
     $response['data']['status'] = $oWiki->getArea51();
     $response['data']['table'] = $oWiki->area51_table;
   break;
   case "Area51Insert":
 	// Add the functions from area51 and merge it with the original page
-	$oGithub = new cGithub();
-    $oWiki = new cWiki($qs_area51, $oGithub);
     $response['data']['status'] = $oWiki->getArea51($qs_merge51);
 	$response['data']['merged'] = $oWiki->area51_ok;
     $response['data']['table'] = $oWiki->area51_table;
   break;
   case "Area51Delete":
 	// Delete the function from area51
-	$oGithub = new cGithub();
-    $oWiki = new cWiki($qs_area51, $oGithub);
     $response['data']['status'] = $oWiki->delArea51($qs_delete51);
 	$response['data']['deleted'] = $oWiki->area51_ok;
     $response['data']['table'] = $oWiki->area51_table;
@@ -48,24 +48,41 @@ print json_encode($response);
  */
 
 class cWiki {
+	// Wiki Access parameters
+	private $api_url = WIKI_URL . "api.php";
+	private $username = "";
+	private $password = "";
+	private $login_token = "";
+	private $csrf_token = "";
+
+	// Public Working property
 	public $area51_table;
 	public $area51_content;
 	public $area51_ok = array();
 
-	private $login_token = "";
-	private $csrf_token = "";
-
+	// Private working property
 	private $area51 = "";
 	private $git;
 	private $tmp_table;
 	private $tmp_content;
-	private $api_url = WIKI_URL . "api.php";
 
 	function __construct($area51, $github) {
 		$this->area51 = basename($area51);
 		$this->git = $github;
 	}
 
+   /*
+    * Set the Wiki bot credential to handle merge/delete
+    */
+	function setCredential($username, $password) {
+		$this->username = $username;
+		$this->password = $password;
+	}
+
+   /*
+    * Get all functions from Area51 and official Wikipages
+	* $insert = array of function name in Area51 that would be merged
+    */
 	function getArea51($insert = array()) {
 		$arrWikipage = array();
 		$arrWikicont = array();
@@ -192,6 +209,10 @@ class cWiki {
 		return $ret;
 	}
 	
+   /*
+    * Get all functions from Area51
+	* $delete = array of function name in Area51 that would be deleted	
+    */
 	function delArea51($delete) {
 		$ret = $this->getFunctions($this->area51);
 		// Devo partire dal fondo altrimenti gli offset non tornano dopo la cancellazione
@@ -227,6 +248,10 @@ class cWiki {
 		return $ret;
 	}
 
+   /*
+    * Extract functions from a wikipage using category and section marker
+	* $page = the name (not url) of the wikipage
+    */
 	function getFunctions($page) {
 		$arrSections = array();
 		$arrFunctions = array();
@@ -286,6 +311,9 @@ class cWiki {
 		return $ret;
 	}
 
+   /*
+    * Extract the content of a function
+    */
 	private function getContent($content, $offset) {
 		$ret = "";
 		// Position at function title
@@ -301,10 +329,16 @@ class cWiki {
 		return $ret;
 	}
 
+   /*
+    * Removes special caracther from a function name
+    */
 	private function cleanName($name) {
 		return trim(str_replace("=", "", $name));
 	}
 
+   /*
+    * Split a function name in area51 from its PR and attach a proper github PR status
+    */
 	private function splitPR($name) {
 		$name = str_replace(", ", " ", $name);
 		$arrName = explode(" ", $name, 2);
@@ -323,12 +357,18 @@ class cWiki {
 		return $arrName;
 	}
 
+   /*
+    * Proper escapes a wiki anchor
+    */
 	private function wikiAnchor($anchor) {
 		$anchor = urlencode($anchor);
 		$anchor = str_replace(array("%", "+"), array(".", "_"), $anchor);
 		return $anchor;
 	}
 
+   /*
+    * Functions to login in Wiki and modify pages, it needs 4 steps
+    */
 	private function loginAll($page, $content) {
 		$ret = "OK";
 		if ($this->login_token == "") {
@@ -379,12 +419,11 @@ class cWiki {
 
 	// Step 2: POST request to log in. Use of main account for login is not
 	// supported. Obtain credentials via Special:BotPasswords
-	// (https://www.mediawiki.org/wiki/Special:BotPasswords) for lgname & lgpassword
 	private function loginRequest() {
 		$params2 = [
 			"action" => "login",
-			"lgname" => WIKI_BOT_USER, // BOT NAME
-			"lgpassword" => WIKI_BOT_PASS, // BOT PASSWORD
+			"lgname" => $this->username, // BOT NAME
+			"lgpassword" => $this->password, // BOT PASSWORD
 			"lgtoken" => $this->login_token,
 			"format" => "json"
 		];
@@ -433,7 +472,7 @@ class cWiki {
 
 	// Step 4: POST request to edit a page
 	public function editRequest($page, $content) {
-    	if (DEBUG) $page = "User:Molideus"; // Only for debug
+    	if (DEBUG) $page = DEBUG_PAGE; // Only for debug
     
 		$params4 = [
 			"action" => "edit",
@@ -475,12 +514,12 @@ class cWiki {
 	}
 
   /*
-   * Check if JSON result is a crowdin error
+   * Check if JSON result is a error
    */
 	function isError($json) {
 		$ret = "OK";
 		if (isset($json['error'])) {
-			$ret = $json['error']['code'] . ' - ' . $json['error']['message'];
+			$ret = $json['error']['code'] . ' - ' . $json['error']['info'];
 		}
 		return $ret;
 	}
@@ -538,7 +577,7 @@ class cWiki {
 	  }
 
 	/*
-	 * Check if JSON result is a crowdin error
+	 * Check if JSON result is a error
 	 */
 	function isError($json) {
 		$ret = "OK";
