@@ -51,9 +51,9 @@
   <input type="text" id="WikiBotUser" name="WikiBotUser" class="inputInsert" value="<?php print WIKI_BOT_USER; ?>"><br>
   <label for="WikiBotPass">Wiki Bot Pass:</label><br>
   <input type="text" id="WikiBotPass" name="WikiBotPass" class="inputInsert" value="<?php print WIKI_BOT_PASS; ?>"><br>
-  <input id="btn-start" type="button" value="START">
+  <input id="btn-start" type="button" value="START / REFRESH">
 
-<p>Just click the "Start" button and wait for function loading.</p>
+<p>Just click the "Start / Refresh" button and wait for function loading.</p>
 <p>NOTE: Credential generated at https://wiki.mudlet.org/w/Special:BotPasswords, needed only "Edit pages" permission</p>
 
 <h2>Output</h2>
@@ -150,6 +150,7 @@
         }, function (status, data) {
             switch (status) {
                 case "beforeSend":
+					$("#tableMerge tbody").empty();
                     writeOutput("Area51 functions started...");
                 break;
                 case "success":
@@ -159,7 +160,6 @@
                         writeOutput("[INFO] functions found: populate table");
                         // Populate the table with functions to merge
                         trg = $("#tableMerge tbody");
-                        trg.empty();
                         for (kSections in data['data']['table']) {
                             vSections = data['data']['table'][kSections];
                             for (kFunctions in vSections) {
@@ -198,6 +198,7 @@
                     } else {
                         writeOutput("[ERROR] functions error [2]: " + data['data']['status']);
                     }
+					$('#Area51, #btn-start').prop('disabled', false);
                 break;
                 case "error":
                     writeOutput("[ERROR] functions error [1]: " + data);
