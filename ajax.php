@@ -197,7 +197,7 @@ class cWiki {
 				}
 				// wiki call to edit the original page
 				if ($bolOneAdd) {
-					$tmpRet = $this->loginAll($kTable, $arrWikicont[$kTable]);
+					$tmpRet = $this->loginAll(WIKI_PAGES[$kTable], $arrWikicont[$kTable]);
 					if ($tmpRet == "OK") {
 						$this->area51_ok = array_merge($this->area51_ok, $arrOK);
 					} else {
@@ -487,6 +487,7 @@ class cWiki {
 			CURLOPT_COOKIEJAR => "wikiedit.txt",
 			CURLOPT_COOKIEFILE => "wikiedit.txt"
 		));
+		// var_dump($page);
 		// var_dump($response["content"]);
 		$ret = $this->isJson($response["content"]);
 		if ($ret == "OK") {
