@@ -102,6 +102,7 @@ class cWiki {
 				$arrName = $this->splitPR($vMerge["NAME"]);
 				$this->area51_table[$kTable][$kMerge]["NAME"] = $arrName[0]; // Name of the function
 				$this->area51_table[$kTable][$kMerge]["PR"] = (isset($arrName[1]) ? $arrName[1] : ""); // PR reference number
+				$this->area51_table[$kTable][$kMerge]["PR"] .= ' ' . ($arrName[2] ? '<span class="mergeOK">&check;' : '<span class="mergeKO">&#10060;') . '</span>'; 
 				// Extract the content and fix it
 				$tmpContent = $this->getContent($this->area51_content, $vMerge["OFFSET"]);
 				$tmpContent = "==" . $this->area51_table[$kTable][$kMerge]["NAME"] . "==\n" . $tmpContent . "\n";
@@ -348,9 +349,11 @@ class cWiki {
 				$arrName[1] = "#" . $matches[1] . " ";
 				// search PR status in GIT
 				if ($this->git->getPR($matches[1]) == "OK") {
-					$arrName[1] .= $this->git->state;
+					$arrName[1] .= $this->git->state['STATE'];
+					$arrName[2] = $this->git->state['MERGED'];
 				} else {
 					$arrName[1] .= "NOT FOUND";
+					$arrName[2] = false;
 				}
 			}
 		}
@@ -556,8 +559,11 @@ class cWiki {
 				$responseJSON = json_decode($response["content"], true);
 				$ret = $this->isError($responseJSON);
 				if ($ret == "OK") {
-					$this->state = $responseJSON["state"];
-					$this->PR[$number] = $this->state;
+					$this->PR[$number] = array(
+						'STATE' => $responseJSON['state'],
+						'MERGED' => $responseJSON['merged']
+					);
+					$this->state = $this->PR[$number];
 				}
 			}
 		}

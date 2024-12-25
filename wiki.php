@@ -6,6 +6,9 @@
   <title>Area51 functions merge</title>
   <style>
     /* Tags */
+	body {
+	  font-size: 14px;
+	}
     input[type="button"], button {
       vertical-align: top;
     }
@@ -20,6 +23,7 @@
 	}
 	th, td {
 	  border: 1px solid black;
+	  padding: 2px 5px;
 	}
 	a:link, a:hover, a:visited, a:active {
 	  color: grey;
@@ -30,6 +34,13 @@
     }
     .inputDisabled {
       background: lightgrey;
+    }
+    .mergeOK {
+      color: green;
+    }
+    .mergeKO {
+      color: red;
+	  font-size: 0.8em;
     }
     /* IDs */
     #latestDate {
@@ -51,9 +62,9 @@
   <input type="text" id="WikiBotUser" name="WikiBotUser" class="inputInsert" value="<?php print WIKI_BOT_USER; ?>"><br>
   <label for="WikiBotPass">Wiki Bot Pass:</label><br>
   <input type="text" id="WikiBotPass" name="WikiBotPass" class="inputInsert" value="<?php print WIKI_BOT_PASS; ?>"><br>
-  <input id="btn-start" type="button" value="START / REFRESH">
+  <input id="btn-start" type="button" value="START / RESET">
 
-<p>Just click the "Start / Refresh" button and wait for function loading.</p>
+<p>Just click the "Start / Reset" button and wait for function loading.</p>
 <p>NOTE: Credential generated at https://wiki.mudlet.org/w/Special:BotPasswords, needed only "Edit pages" permission</p>
 
 <h2>Output</h2>
@@ -62,7 +73,7 @@
     <thead>
 	  <th>Section</th>
 	  <th>Function</th>
-	  <th>PR</th>
+	  <th>PR (merged)</th>
 	  <th><input type="checkbox" class="btn-all" value="1" /> Merge</th>
 	  <th><input type="checkbox" class="btn-all" value="1" /> Delete</th>
 	  <th>Insert</th>
@@ -75,6 +86,7 @@
   <br>
   <input id="btn-merge" type="button" value="MERGE" disabled="disabled">
   <input id="btn-delete" type="button" value="DELETE" disabled="disabled">
+  <input id="btn-refresh" type="button" value="REFRESH" disabled="disabled">
 
 <h2>Debug windows</h2>
 
@@ -93,15 +105,29 @@
 		});
 
 		// retrive the area51 functions and try to match it with the official page
-		$("#btn-start").click(function (e) {
+		$("#btn-start, #btn-refresh").click(function (e) {
 			if ($("#Area51").val() == "") {
 				alert('Insert a valid Area51 url');
 				return;
 			} else {
 				$('#Area51, #btn-start').prop('disabled', true);
-				Area51Functions();
+				$('#btn-merge, #btn-delete, #btn-refresh').prop('disabled', true);
+
+				var mergeable = [];
+				var deletable = [];
+				// salvo campi merge/delete solo in caso di refresh
+				if ($(this).attr('id') == 'btn-refresh') {
+					$('.mergeable:checked').each(function(i){
+						mergeable[i] = $(this).val();
+					});
+					
+					$('.deletable:checked').each(function(i){
+						deletable[i] = $(this).val();
+					});				
+				}
+				Area51Functions(mergeable, deletable);
 			}
-		});
+		});	
 
 		// do the real merge and overwrite the original page with new information
 		$("#btn-merge").click(function (e) {
@@ -112,12 +138,12 @@
 			if (mergeable.length == 0) {
 				alert("No functions to merge");        
 			} else {
-                if ($("#WikiBotUser").val() == "" || $("#WikiBotPass").val() == "") {
-                    alert("Wiki Bot User / Pass are mandatory for merging!");
-                } else if (confirm("Do you really want to merge this functions?")) {
-                    $('#btn-merge, #btn-delete').prop('disabled', true);
-                    Area51Insert(mergeable);
-                }
+				if ($("#WikiBotUser").val() == "" || $("#WikiBotPass").val() == "") {
+					alert("Wiki Bot User / Pass are mandatory for merging!");
+				} else if (confirm("Do you really want to merge this functions?")) {
+					$('#btn-merge, #btn-delete, #btn-refresh').prop('disabled', true);
+					Area51Insert(mergeable);
+				}
 			}
 		});
 		
@@ -130,23 +156,24 @@
 			if (deletable.length == 0) {
 				alert("No functions to delete");
 			} else { 
-                if ($("#WikiBotUser").val() == "" || $("#WikiBotPass").val() == "") {
-                    alert("Wiki Bot User / Pass are mandatory for deleting!");
-                } else if (confirm("Do you really want to delete this functions from Area51?")) {
-                    $('#btn-merge, #btn-delete').prop('disabled', true);
-                    Area51Delete(deletable);
-                }
-            }
-        });		
+				if ($("#WikiBotUser").val() == "" || $("#WikiBotPass").val() == "") {
+					alert("Wiki Bot User / Pass are mandatory for deleting!");
+				} else if (confirm("Do you really want to delete this functions from Area51?")) {
+					$('#btn-merge, #btn-delete, #btn-refresh').prop('disabled', true);
+					Area51Delete(deletable);
+				}
+			}
+		});
 	});
 
   /*
    * Request Wikimedia to get functions element
    */
-	function Area51Functions() {
+	function Area51Functions(mergeable, deletable) {
 		makeRequest({
             WikiBotUser: $("#WikiBotUser").val(), WikiBotPass: $("#WikiBotPass").val(),
-            action: "Area51", area51: $("#Area51").val()
+            action: "Area51", area51: $("#Area51").val(),
+			merge51: mergeable, delete51: deletable
         }, function (status, data) {
             switch (status) {
                 case "beforeSend":
@@ -194,7 +221,15 @@
                             }
                         }
 
-                        $('#btn-merge, #btn-delete').prop('disabled', false);
+						// Reload active check for merge/delete
+						for (id in data['param']['merge51']) {
+							$("#tableMerge tbody").find('.mergeable[value="' + data['param']['merge51'][id] + '"]').prop('checked', true);
+						}
+						for (id in data['param']['delete51']) {
+							$("#tableMerge tbody").find('.deletable[value="' + data['param']['delete51'][id] + '"]').prop('checked', true);
+						}						
+
+                        $('#btn-merge, #btn-delete, #btn-refresh').prop('disabled', false);
                     } else {
                         writeOutput("[ERROR] functions error [2]: " + data['data']['status']);
                     }
@@ -233,9 +268,11 @@
 					} else {
 						writeOutput("[ERROR] insert error [2]: " + data['data']['status']);
 					}
+					$('#btn-refresh').prop('disabled', false);
 				break;
 				case "error":
 					writeOutput("[ERROR] insert error [1]: " + data);
+					$('#btn-refresh').prop('disabled', false);
 				break;
 			};
 		});
@@ -265,9 +302,11 @@
 					} else {
 						writeOutput("[ERROR] delete error [2]: " + data['data']['status']);
 					}
+					$('#btn-refresh').prop('disabled', false);
 				break;
 				case "error":
 					writeOutput("[ERROR] delete error [1]: " + data);
+					$('#btn-refresh').prop('disabled', false);
 				break;
 			};
 		});
