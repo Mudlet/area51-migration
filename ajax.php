@@ -133,23 +133,31 @@ class cWiki {
 								// Check if there is more than a result
 								if (count($arrWikipage[$kTable]) == 1) {
 									$arrFunctions = reset($arrWikipage[$kTable]);
-									// Avoid STUBLAST element
+									// First search for REPLACE (avoid STUBLAST element)
 									for ($i = count($arrFunctions) - 2; $i >= 0; $i--) {
 										$tmpCompare = strcmp($arrFunctions[$i]["NAME"], $this->area51_table[$kTable][$kMerge]["NAME"]);
-										// Insert or replace the functions test
+										// Replace the function text
 										if ($tmpCompare === 0) {
 											$this->area51_table[$kTable][$kMerge]["MERGE"] = MERGE_REPLACE;
 											$this->area51_table[$kTable][$kMerge]["NOTE"] = "REPLACE " . $arrFunctions[$i]["NAME"];
 											$this->area51_table[$kTable][$kMerge]["OFFSET_INSERT"] = $arrFunctions[$i]["OFFSET"];
 											$this->area51_table[$kTable][$kMerge]["OFFSET_STOP"  ] = $arrFunctions[$i+1]["OFFSET"];
 											break;
-										} elseif ($tmpCompare < 0) {
-											$this->area51_table[$kTable][$kMerge]["MERGE"] = MERGE_INSERT;
-											$this->area51_table[$kTable][$kMerge]["NOTE"] = "INSERT after " . $arrFunctions[$i]["NAME"];
-											$this->area51_table[$kTable][$kMerge]["OFFSET_INSERT"] = $arrFunctions[$i+1]["OFFSET"];
-											break;
 										}
 									}
+									// Last search for INSERT in a-z order (avoid STUBLAST element)
+									if ($this->area51_table[$kTable][$kMerge]["MERGE"] == MERGE_NONE) {
+										for ($i = count($arrFunctions) - 2; $i >= 0; $i--) {
+											$tmpCompare = strcmp($arrFunctions[$i]["NAME"], $this->area51_table[$kTable][$kMerge]["NAME"]);
+											// Insert the function text
+											if ($tmpCompare < 0) {
+												$this->area51_table[$kTable][$kMerge]["MERGE"] = MERGE_INSERT;
+												$this->area51_table[$kTable][$kMerge]["NOTE"] = "INSERT after " . $arrFunctions[$i]["NAME"];
+												$this->area51_table[$kTable][$kMerge]["OFFSET_INSERT"] = $arrFunctions[$i+1]["OFFSET"];
+												break;
+											}
+										}
+									}  
 									if ($this->area51_table[$kTable][$kMerge]["MERGE"] == MERGE_NONE && $this->area51_table[$kTable][$kMerge]["NOTE"] == "") {
 										$this->area51_table[$kTable][$kMerge]["NOTE"] = "Cannot find where insert functions";
 									} else {										
